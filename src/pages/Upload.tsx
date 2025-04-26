@@ -3,6 +3,7 @@ import React, { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useVideo, VideoFormat, VideoResolution } from '@/contexts/VideoContext';
 import Navbar from '@/components/Navbar';
+import ProcessingOptions from '@/components/ProcessingOptions';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import {
@@ -13,14 +14,22 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { Upload, FileVideo, X, Check } from 'lucide-react';
+import { Upload, FileVideo, X, Check, ChevronDown, ChevronUp } from 'lucide-react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
 const UploadPage = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [format, setFormat] = useState<VideoFormat>('mp4');
   const [resolution, setResolution] = useState<VideoResolution>('720p');
+  const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // New processing options
+  const [compression, setCompression] = useState(false);
+  const [noiseReduction, setNoiseReduction] = useState(false);
+  const [subtitles, setSubtitles] = useState(false);
+  const [thumbnails, setThumbnails] = useState(false);
   
   const { uploadVideo } = useVideo();
   const navigate = useNavigate();
@@ -83,7 +92,17 @@ const UploadPage = () => {
     
     setIsUploading(true);
     try {
-      await uploadVideo(selectedFile, format, resolution);
+      // Create processing options object only if at least one option is enabled
+      const processingOptions = (compression || noiseReduction || subtitles || thumbnails) 
+        ? { 
+            compression, 
+            noiseReduction, 
+            subtitles, 
+            thumbnails 
+          } 
+        : undefined;
+        
+      await uploadVideo(selectedFile, format, resolution, processingOptions);
       navigate('/dashboard');
     } catch (error) {
       console.error('Upload error:', error);
@@ -189,6 +208,37 @@ const UploadPage = () => {
                 </Select>
               </div>
             </div>
+            
+            <Collapsible
+              open={isAdvancedOpen}
+              onOpenChange={setIsAdvancedOpen}
+              className="border rounded-md p-4"
+            >
+              <CollapsibleTrigger asChild>
+                <div className="flex items-center justify-between cursor-pointer">
+                  <h3 className="text-lg font-medium">Advanced Processing Options</h3>
+                  <Button variant="ghost" size="sm">
+                    {isAdvancedOpen ? (
+                      <ChevronUp className="h-4 w-4" />
+                    ) : (
+                      <ChevronDown className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="mt-4">
+                <ProcessingOptions
+                  compression={compression}
+                  setCompression={setCompression}
+                  noiseReduction={noiseReduction}
+                  setNoiseReduction={setNoiseReduction}
+                  subtitles={subtitles}
+                  setSubtitles={setSubtitles}
+                  thumbnails={thumbnails}
+                  setThumbnails={setThumbnails}
+                />
+              </CollapsibleContent>
+            </Collapsible>
             
             <div className="flex justify-end">
               <Button

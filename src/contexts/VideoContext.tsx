@@ -8,6 +8,14 @@ export type ProcessingStatus = 'pending' | 'processing' | 'completed' | 'failed'
 export type VideoFormat = 'mp4' | 'avi' | 'mkv';
 export type VideoResolution = '720p' | '1080p' | '480p';
 
+// New processing options
+export interface ProcessingOptions {
+  compression: boolean;       // Lossless compression
+  noiseReduction: boolean;    // Remove noise
+  subtitles: boolean;         // Generate subtitles
+  thumbnails: boolean;        // Generate video thumbnails
+}
+
 export interface Video {
   id: string;
   userId: string;
@@ -15,6 +23,7 @@ export interface Video {
   originalFileName: string;
   processedFileName?: string;
   thumbnail?: string;
+  thumbnails?: string[];      // Array of generated thumbnail URLs
   status: ProcessingStatus;
   format: VideoFormat;
   resolution: VideoResolution;
@@ -23,14 +32,26 @@ export interface Video {
   uploadDate: string;
   processedDate?: string;
   driveLink?: string;
+  subtitlesUrl?: string;      // URL to the generated subtitles file
+  processingOptions?: ProcessingOptions;
 }
 
 interface VideoContextType {
   videos: Video[];
   isLoading: boolean;
-  uploadVideo: (file: File, format: VideoFormat, resolution: VideoResolution) => Promise<void>;
+  uploadVideo: (
+    file: File, 
+    format: VideoFormat, 
+    resolution: VideoResolution, 
+    options?: ProcessingOptions
+  ) => Promise<void>;
   deleteVideo: (id: string) => Promise<void>;
-  reprocessVideo: (id: string, format: VideoFormat, resolution: VideoResolution) => Promise<void>;
+  reprocessVideo: (
+    id: string, 
+    format: VideoFormat, 
+    resolution: VideoResolution, 
+    options?: ProcessingOptions
+  ) => Promise<void>;
   getAllVideos: () => Video[]; // Admin function
 }
 
@@ -138,7 +159,12 @@ export const VideoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   }, [videos]);
 
-  const uploadVideo = async (file: File, format: VideoFormat, resolution: VideoResolution) => {
+  const uploadVideo = async (
+    file: File, 
+    format: VideoFormat, 
+    resolution: VideoResolution, 
+    options?: ProcessingOptions
+  ) => {
     if (!user) {
       toast.error("You must be logged in to upload videos");
       throw new Error("Not authenticated");
@@ -166,6 +192,7 @@ export const VideoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         size: `${(file.size / (1024 * 1024)).toFixed(1)} MB`,
         duration: '00:00', // We'd calculate this from the actual file
         uploadDate: new Date().toISOString(),
+        processingOptions: options,
       };
       
       setVideos(prev => [newVideo, ...prev]);
@@ -184,6 +211,25 @@ export const VideoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         // After processing, update to completed
         setTimeout(() => {
           const processedFileName = `${newVideo.title.toLowerCase().replace(/\s+/g, '_')}_${resolution}.${format}`;
+          
+          // Generate mock data for the new features if enabled
+          const thumbnails = options?.thumbnails 
+            ? [
+                `https://placehold.co/600x400/${colorHex}/ffffff?text=Thumbnail+1`,
+                `https://placehold.co/600x400/${colorHex}/ffffff?text=Thumbnail+2`,
+                `https://placehold.co/600x400/${colorHex}/ffffff?text=Thumbnail+3`,
+              ] 
+            : undefined;
+          
+          const subtitlesUrl = options?.subtitles 
+            ? `https://example.com/subtitles/${newVideo.id}.vtt` 
+            : undefined;
+          
+          // Calculate a slightly smaller file size if compression was applied
+          const compressedSize = options?.compression 
+            ? `${(file.size / (1024 * 1024) * 0.7).toFixed(1)} MB` // 30% size reduction  
+            : `${(file.size / (1024 * 1024)).toFixed(1)} MB`;
+          
           setVideos(prev => 
             prev.map(v => v.id === newVideo.id ? { 
               ...v, 
@@ -191,9 +237,23 @@ export const VideoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
               processedFileName,
               processedDate: new Date().toISOString(),
               driveLink: `https://drive.google.com/mock-link-${Math.floor(Math.random() * 1000)}`,
+              thumbnails,
+              subtitlesUrl,
+              size: options?.compression ? compressedSize : v.size
             } : v)
           );
-          toast.success(`Processing completed for "${newVideo.title}"`);
+          
+          const featuresApplied = [];
+          if (options?.compression) featuresApplied.push("compression");
+          if (options?.noiseReduction) featuresApplied.push("noise reduction");
+          if (options?.subtitles) featuresApplied.push("subtitle generation");
+          if (options?.thumbnails) featuresApplied.push("thumbnail generation");
+          
+          const featuresMessage = featuresApplied.length > 0 
+            ? ` with ${featuresApplied.join(", ")}`
+            : "";
+            
+          toast.success(`Processing completed for "${newVideo.title}"${featuresMessage}`);
         }, 5000);
       }, processingTime);
       
@@ -221,7 +281,12 @@ export const VideoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   };
 
-  const reprocessVideo = async (id: string, format: VideoFormat, resolution: VideoResolution) => {
+  const reprocessVideo = async (
+    id: string, 
+    format: VideoFormat, 
+    resolution: VideoResolution, 
+    options?: ProcessingOptions
+  ) => {
     setIsLoading(true);
     try {
       // Find the video
@@ -232,7 +297,13 @@ export const VideoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       
       // Update status to processing
       setVideos(prev => 
-        prev.map(v => v.id === id ? { ...v, status: 'processing', format, resolution } : v)
+        prev.map(v => v.id === id ? { 
+          ...v, 
+          status: 'processing', 
+          format, 
+          resolution, 
+          processingOptions: options 
+        } : v)
       );
       
       toast.info(`Reprocessing started for "${video.title}"`);
@@ -240,7 +311,29 @@ export const VideoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       // Simulate processing delay (3-5 seconds)
       await new Promise(resolve => setTimeout(resolve, Math.random() * 2000 + 3000));
       
-      // Update to completed with new format and resolution
+      // Generate random color for thumbnails
+      const colorHex = Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0');
+      
+      // Generate mock data for the new features if enabled
+      const thumbnails = options?.thumbnails 
+        ? [
+            `https://placehold.co/600x400/${colorHex}/ffffff?text=Thumbnail+1`,
+            `https://placehold.co/600x400/${colorHex}/ffffff?text=Thumbnail+2`,
+            `https://placehold.co/600x400/${colorHex}/ffffff?text=Thumbnail+3`,
+          ] 
+        : undefined;
+      
+      const subtitlesUrl = options?.subtitles 
+        ? `https://example.com/subtitles/${video.id}.vtt` 
+        : undefined;
+      
+      // Calculate a slightly smaller file size if compression was applied
+      const originalSizeNum = parseFloat(video.size.split(' ')[0]);
+      const compressedSize = options?.compression 
+        ? `${(originalSizeNum * 0.7).toFixed(1)} MB` // 30% size reduction 
+        : video.size;
+      
+      // Update to completed with new format, resolution and processing options
       const processedFileName = `${video.title.toLowerCase().replace(/\s+/g, '_')}_${resolution}.${format}`;
       setVideos(prev => 
         prev.map(v => v.id === id ? { 
@@ -251,10 +344,24 @@ export const VideoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           processedFileName,
           processedDate: new Date().toISOString(),
           driveLink: `https://drive.google.com/mock-link-${Math.floor(Math.random() * 1000)}`,
+          thumbnails,
+          subtitlesUrl,
+          size: options?.compression ? compressedSize : v.size,
+          processingOptions: options
         } : v)
       );
       
-      toast.success(`Reprocessing completed for "${video.title}"`);
+      const featuresApplied = [];
+      if (options?.compression) featuresApplied.push("compression");
+      if (options?.noiseReduction) featuresApplied.push("noise reduction");
+      if (options?.subtitles) featuresApplied.push("subtitle generation");
+      if (options?.thumbnails) featuresApplied.push("thumbnail generation");
+      
+      const featuresMessage = featuresApplied.length > 0 
+        ? ` with ${featuresApplied.join(", ")}`
+        : "";
+        
+      toast.success(`Reprocessing completed for "${video.title}"${featuresMessage}`);
     } catch (error) {
       toast.error("Failed to reprocess video");
       console.error(error);

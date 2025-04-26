@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { format } from 'date-fns';
 import {
   Card,
@@ -7,10 +7,13 @@ import {
   CardFooter,
   CardHeader,
 } from '@/components/ui/card';
-import { Video, ProcessingStatus } from '@/contexts/VideoContext';
+import { Video, ProcessingStatus, ProcessingOptions } from '@/contexts/VideoContext';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Loader2, CheckCircle, XCircle, Clock, Download, Trash2, RefreshCw } from 'lucide-react';
+import { 
+  Loader2, CheckCircle, XCircle, Clock, Download, Trash2, RefreshCw,
+  FileText, Image, ZoomIn, VolumeX
+} from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -27,11 +30,28 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion';
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+} from "@/components/ui/carousel";
+import {
+  Switch
+} from "@/components/ui/switch";
+import { Label } from '@/components/ui/label';
 
 interface VideoCardProps {
   video: Video;
   onDelete?: (id: string) => void;
-  onReprocess?: (id: string, format: 'mp4' | 'avi' | 'mkv', resolution: '720p' | '1080p' | '480p') => void;
+  onReprocess?: (id: string, format: 'mp4' | 'avi' | 'mkv', resolution: '720p' | '1080p' | '480p', options?: ProcessingOptions) => void;
   isAdmin?: boolean;
 }
 
@@ -39,6 +59,13 @@ const VideoCard: React.FC<VideoCardProps> = ({ video, onDelete, onReprocess, isA
   const [showReprocessDialog, setShowReprocessDialog] = React.useState(false);
   const [selectedFormat, setSelectedFormat] = React.useState<'mp4' | 'avi' | 'mkv'>(video.format);
   const [selectedResolution, setSelectedResolution] = React.useState<'720p' | '1080p' | '480p'>(video.resolution);
+  const [showThumbnails, setShowThumbnails] = useState(false);
+  
+  // Reprocessing options state
+  const [compression, setCompression] = useState(video.processingOptions?.compression || false);
+  const [noiseReduction, setNoiseReduction] = useState(video.processingOptions?.noiseReduction || false);
+  const [subtitles, setSubtitles] = useState(video.processingOptions?.subtitles || false);
+  const [thumbnails, setThumbnails] = useState(video.processingOptions?.thumbnails || false);
 
   const statusMap: Record<ProcessingStatus, { icon: React.ReactNode; label: string; color: string }> = {
     pending: { 
@@ -65,12 +92,68 @@ const VideoCard: React.FC<VideoCardProps> = ({ video, onDelete, onReprocess, isA
 
   const handleReprocess = () => {
     if (onReprocess) {
-      onReprocess(video.id, selectedFormat, selectedResolution);
+      const options = (compression || noiseReduction || subtitles || thumbnails) 
+        ? { 
+            compression, 
+            noiseReduction, 
+            subtitles, 
+            thumbnails 
+          } 
+        : undefined;
+      
+      onReprocess(video.id, selectedFormat, selectedResolution, options);
       setShowReprocessDialog(false);
     }
   };
 
   const { icon, label, color } = statusMap[video.status];
+
+  // Helper function to render feature badges
+  const renderFeatureBadges = () => {
+    const badges = [];
+    
+    if (video.processingOptions?.compression) {
+      badges.push(
+        <Badge key="compression" variant="outline" className="mr-1 bg-blue-50 text-blue-700 border-blue-200">
+          <ZoomIn className="h-3 w-3 mr-1" />
+          Compressed
+        </Badge>
+      );
+    }
+    
+    if (video.processingOptions?.noiseReduction) {
+      badges.push(
+        <Badge key="noise" variant="outline" className="mr-1 bg-purple-50 text-purple-700 border-purple-200">
+          <VolumeX className="h-3 w-3 mr-1" />
+          Noise Reduced
+        </Badge>
+      );
+    }
+    
+    if (video.processingOptions?.subtitles) {
+      badges.push(
+        <Badge key="subtitles" variant="outline" className="mr-1 bg-amber-50 text-amber-700 border-amber-200">
+          <FileText className="h-3 w-3 mr-1" />
+          Subtitled
+        </Badge>
+      );
+    }
+    
+    if (video.processingOptions?.thumbnails) {
+      badges.push(
+        <Badge key="thumbnails" variant="outline" className="mr-1 bg-emerald-50 text-emerald-700 border-emerald-200">
+          <Image className="h-3 w-3 mr-1" />
+          Thumbnails
+        </Badge>
+      );
+    }
+    
+    return badges.length > 0 ? (
+      <div className="mt-2 flex flex-wrap gap-1">
+        {badges}
+      </div>
+    ) : null;
+  };
 
   return (
     <Card className="h-full flex flex-col">
@@ -102,7 +185,51 @@ const VideoCard: React.FC<VideoCardProps> = ({ video, onDelete, onReprocess, isA
           {video.processedDate && (
             <p>Processed: {format(new Date(video.processedDate), 'MMM dd, yyyy')}</p>
           )}
+          {renderFeatureBadges()}
         </div>
+        
+        {video.status === 'completed' && (
+          <Accordion type="single" collapsible className="w-full mt-3">
+            {video.processingOptions?.thumbnails && video.thumbnails && (
+              <AccordionItem value="thumbnails">
+                <AccordionTrigger className="text-sm py-2">
+                  View Thumbnails
+                </AccordionTrigger>
+                <AccordionContent>
+                  <Carousel className="w-full max-w-xs mx-auto">
+                    <CarouselContent>
+                      {video.thumbnails.map((thumb, index) => (
+                        <CarouselItem key={index}>
+                          <img 
+                            src={thumb} 
+                            alt={`Thumbnail ${index + 1}`}
+                            className="w-full h-32 object-cover rounded-md" 
+                          />
+                        </CarouselItem>
+                      ))}
+                    </CarouselContent>
+                    <CarouselPrevious className="left-0" />
+                    <CarouselNext className="right-0" />
+                  </Carousel>
+                </AccordionContent>
+              </AccordionItem>
+            )}
+            
+            {video.processingOptions?.subtitles && video.subtitlesUrl && (
+              <AccordionItem value="subtitles">
+                <AccordionTrigger className="text-sm py-2">
+                  Subtitles
+                </AccordionTrigger>
+                <AccordionContent>
+                  <Button variant="outline" size="sm" className="w-full" onClick={() => window.open(video.subtitlesUrl, '_blank')}>
+                    <FileText className="mr-2 h-4 w-4" />
+                    Download Subtitles
+                  </Button>
+                </AccordionContent>
+              </AccordionItem>
+            )}
+          </Accordion>
+        )}
       </CardContent>
       <CardFooter className="p-4 pt-0 flex flex-wrap gap-2">
         {video.status === 'completed' && video.driveLink && (
@@ -129,7 +256,7 @@ const VideoCard: React.FC<VideoCardProps> = ({ video, onDelete, onReprocess, isA
               <DialogHeader>
                 <DialogTitle>Reprocess Video</DialogTitle>
                 <DialogDescription>
-                  Choose the format and resolution for reprocessing "{video.title}"
+                  Choose the format, resolution and processing options for "{video.title}"
                 </DialogDescription>
               </DialogHeader>
               
@@ -166,6 +293,48 @@ const VideoCard: React.FC<VideoCardProps> = ({ video, onDelete, onReprocess, isA
                       <SelectItem value="1080p">1080p</SelectItem>
                     </SelectContent>
                   </Select>
+                </div>
+                
+                <div className="space-y-2 pt-2">
+                  <h4 className="text-sm font-medium mb-3">Processing Options</h4>
+                  
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="reprocess-compression" className="text-sm">Lossless Compression</Label>
+                      <Switch
+                        id="reprocess-compression"
+                        checked={compression}
+                        onCheckedChange={setCompression}
+                      />
+                    </div>
+                    
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="reprocess-noise" className="text-sm">Noise Reduction</Label>
+                      <Switch
+                        id="reprocess-noise"
+                        checked={noiseReduction}
+                        onCheckedChange={setNoiseReduction}
+                      />
+                    </div>
+                    
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="reprocess-subtitles" className="text-sm">Generate Subtitles</Label>
+                      <Switch
+                        id="reprocess-subtitles"
+                        checked={subtitles}
+                        onCheckedChange={setSubtitles}
+                      />
+                    </div>
+                    
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="reprocess-thumbnails" className="text-sm">Generate Thumbnails</Label>
+                      <Switch
+                        id="reprocess-thumbnails"
+                        checked={thumbnails}
+                        onCheckedChange={setThumbnails}
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
               
