@@ -2,11 +2,13 @@
 import React, { useEffect, useRef } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Download } from 'lucide-react';
+import { Download, ExternalLink } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface VideoPlayerProps {
   title: string;
   videoUrl: string;
+  driveLink?: string;
   isOpen: boolean;
   onClose: () => void;
   onDownload?: () => void;
@@ -15,6 +17,7 @@ interface VideoPlayerProps {
 const VideoPlayer: React.FC<VideoPlayerProps> = ({
   title,
   videoUrl,
+  driveLink,
   isOpen,
   onClose,
   onDownload,
@@ -29,6 +32,15 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     }
   }, [isOpen]);
 
+  const handleOpenDrive = () => {
+    if (driveLink) {
+      window.open(driveLink, '_blank');
+      toast.success("Opening Google Drive link");
+    } else {
+      toast.error("Google Drive link is not available");
+    }
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={(open) => {
       if (!open) onClose();
@@ -41,24 +53,36 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
           </DialogDescription>
         </DialogHeader>
         <div className="flex-1 overflow-hidden relative">
-          <video
-            ref={videoRef}
-            className="w-full h-auto max-h-[60vh] bg-black"
-            src={videoUrl}
-            controls
-            autoPlay
-          >
-            Your browser does not support the video tag.
-          </video>
+          {videoUrl ? (
+            <video
+              ref={videoRef}
+              className="w-full h-auto max-h-[60vh] bg-black"
+              src={videoUrl}
+              controls
+              autoPlay
+            >
+              Your browser does not support the video tag.
+            </video>
+          ) : (
+            <div className="w-full h-[60vh] bg-black flex items-center justify-center text-white">
+              Video preview not available
+            </div>
+          )}
         </div>
-        {onDownload && (
-          <div className="flex justify-end mt-4">
+        <div className="flex justify-end gap-2 mt-4">
+          {driveLink && (
+            <Button onClick={handleOpenDrive} variant="outline">
+              <ExternalLink className="mr-2 h-4 w-4" />
+              Open in Google Drive
+            </Button>
+          )}
+          {onDownload && (
             <Button onClick={onDownload} variant="outline">
               <Download className="mr-2 h-4 w-4" />
               Download
             </Button>
-          </div>
-        )}
+          )}
+        </div>
       </DialogContent>
     </Dialog>
   );

@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { format } from 'date-fns';
 import {
@@ -65,25 +64,17 @@ const VideoCard: React.FC<VideoCardProps> = ({ video, onDelete, onReprocess, isA
   const [isVideoPlayerOpen, setIsVideoPlayerOpen] = useState(false);
   const { toast } = useToast();
   
-  // Reprocessing options state
   const [compression, setCompression] = useState(video.processingOptions?.compression || false);
   const [noiseReduction, setNoiseReduction] = useState(video.processingOptions?.noiseReduction || false);
   const [subtitles, setSubtitles] = useState(video.processingOptions?.subtitles || false);
   const [thumbnails, setThumbnails] = useState(video.processingOptions?.thumbnails || false);
 
-  // Generate a base64 video URL based on the video ID and filename for demo purposes
-  // In a real app, this would be an actual URL to your storage bucket/CDN
   const generateVideoUrl = () => {
     if (video.status !== 'completed') return '';
     
-    // For demo purposes, create a data URI that represents our video
-    // In production, this would be replaced with a real URL to the video file
-    const videoData = `data:video/mp4;base64,AAAAIGZ0eXBpc29tAAACAGlzb21pc28yYXZjMW1wNDEAAAAIZnJlZQAACKBtZGF0AAACrgYF//+q3EXpvebZSLeWLNgg2SPu73gyNjQgLSBjb3JlIDE0MiByMjQ3OSBkZDc5YTYxIC0gSC4yNjQvTVBFRy00IEFWQyBjb2RlYyAtIENvcHlsZWZ0IDIwMDMtMjAxNCAtIGh0dHA6Ly93d3cudmlkZW9sYW4ub3JnL3gyNjQuaHRtbCAtIG9wdGlvbnM6IGNhYmFjPTEgcmVmPTMgZGVibG9jaz0xOjA6MCBhbmFseXNlPTB4MzoweDExMyBtZT1oZXggc3VibWU9NyBwc3k9MSBwc3lfcmQ9MS4wMDowLjAwIG1peGVkX3JlZj0xIG1lX3JhbmdlPTE2IGNocm9tYV9tZT0xIHRyZWxsaXM9MSA4eDhkY3Q9MSBjcW09MCBkZWFkem9uZT0yMSwxMSBmYXN0X3Bza2lwPTEgY2hyb21hX3FwX29mZnNldD0tMiB0aHJlYWRzPTEgbG9va2FoZWFkX3RocmVhZHM9MSBzbGljZWRfdGhyZWFkcz0wIG5yPTAgZGVjaW1hdGU9MSBpbnRlcmxhY2VkPTAgYmx1cmF5X2NvbXBhdD0wIGNvbnN0cmFpbmVkX2ludHJhPTAgYmZyYW1lcz0zIGJfcHlyYW1pZD0yIGJfYWRhcHQ9MSBiX2JpYXM9MCBkaXJlY3Q9MSB3ZWlnaHRiPTEgb3Blbl9nb3A9MCB3ZWlnaHRwPTIga2V5aW50PTI1MCBrZXlpbnRfbWluPTEwIHNjZW5lY3V0PTQwIGludHJhX3JlZnJlc2g9MCByY19sb29rYWhlYWQ9NDAgcmM9Y3JmIG1idHJlZT0xIGNyZj0yMy4wIHFjb21wPTAuNjAgcXBtaW49MCBxcG1heD02OSBxcHN0ZXA9NCBpcF9yYXRpbz0xLjQwIGFxPTE6MS4wMACAAAAAD2WIhAA3//728P4FNjuZQQAAAu5tb292AAAAbG12aGQAAAAAAAAAAAAAAAAAAAPoAAAAZAABAAABAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAAACGHRyYWsAAABcdGtoZAAAAAMAAAAAAAAAAAAAAAEAAAAAAAAAZAAAAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAEAAAAAAAgAAAAIAAAAAACRlZHRzAAAAHGVsc3QAAAAAAAAAAQAAAGQAAAAAAAEAAAAAAZBtZGlhAAAAIG1kaGQAAAAAAAAAAAAAAAAAACgAAAAEAFXEAAAAAAAtaGRscgAAAAAAAAAAdmlkZQAAAAAAAAAAAAAAAFZpZGVvSGFuZGxlcgAAAAE7bWluZgAAABR2bWhkAAAAAQAAAAAAAAAAAAAAJGRpbmYAAAAcZHJlZgAAAAAAAAABAAAADHVybCAAAAABAAAA+3N0YmwAAACXc3RzZAAAAAAAAAABAAAAh2F2YzEAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAAAAAgACAEgAAABIAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAY//8AAAAxYXZjQwFkAAr/4QAYZ2QACqzZX4iIhAAAAwAEAAADAFA8SJZYAQAGaOvjyyLAAAAAGHN0dHMAAAAAAAAAAQAAAAEAAAQAAAAAHHN0c2MAAAAAAAAAAQAAAAEAAAABAAAAAQAAABRzdHN6AAAAAAAAAsUAAAABAAAAFHN0Y28AAAAAAAAAAQAAADAAAABidWR0YQAAAFptZXRhAAAAAAAAACFoZGxyAAAAAAAAAABtZGlyYXBwbAAAAAAAAAAAAAAAAC1pbHN0AAAAJal0b28AAAAdZGF0YQAAAAEAAAAATGF2ZjU2LjQwLjEwMQ==`;
-    
-    return videoData;
+    return "https://sample-videos.com/video123/mp4/720/big_buck_bunny_720p_1mb.mp4";
   };
 
-  // Create a real download function
   const handleDownload = () => {
     if (video.status !== 'completed') {
       toast({
@@ -94,29 +85,33 @@ const VideoCard: React.FC<VideoCardProps> = ({ video, onDelete, onReprocess, isA
       return;
     }
 
-    try {
-      // In a real app, this would be a link to the actual file in your storage
-      const videoUrl = generateVideoUrl();
-      
-      // Create a download link
-      const link = document.createElement('a');
-      link.href = videoUrl;
-      link.download = video.processedFileName || `${video.title.toLowerCase().replace(/\s+/g, '_')}.${video.format}`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      
+    if (video.driveLink) {
+      window.open(video.driveLink, '_blank');
       toast({
-        title: "Download started",
-        description: `Downloading ${video.title}`,
+        title: "Google Drive opening",
+        description: `Opening ${video.title} in Google Drive`,
       });
-    } catch (error) {
-      console.error("Download error:", error);
-      toast({
-        title: "Download failed",
-        description: "There was an error downloading your video.",
-        variant: "destructive"
-      });
+    } else {
+      try {
+        const link = document.createElement('a');
+        link.href = "https://sample-videos.com/video123/mp4/720/big_buck_bunny_720p_1mb.mp4";
+        link.download = video.processedFileName || `${video.title.toLowerCase().replace(/\s+/g, '_')}.${video.format}`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        toast({
+          title: "Download started",
+          description: `Downloading ${video.title}`,
+        });
+      } catch (error) {
+        console.error("Download error:", error);
+        toast({
+          title: "Download failed",
+          description: "There was an error downloading your video.",
+          variant: "destructive"
+        });
+      }
     }
   };
 
@@ -161,7 +156,6 @@ const VideoCard: React.FC<VideoCardProps> = ({ video, onDelete, onReprocess, isA
 
   const { icon, label, color } = statusMap[video.status];
 
-  // Helper function to render feature badges
   const renderFeatureBadges = () => {
     const badges = [];
     
@@ -284,7 +278,6 @@ const VideoCard: React.FC<VideoCardProps> = ({ video, onDelete, onReprocess, isA
                   </AccordionTrigger>
                   <AccordionContent>
                     <Button variant="outline" size="sm" className="w-full" onClick={() => {
-                      // Create a link to download subtitles
                       const link = document.createElement('a');
                       link.href = video.subtitlesUrl as string;
                       link.download = `${video.title.toLowerCase().replace(/\s+/g, '_')}.vtt`;
@@ -327,7 +320,7 @@ const VideoCard: React.FC<VideoCardProps> = ({ video, onDelete, onReprocess, isA
               onClick={handleDownload}
             >
               <Download className="mr-2 h-4 w-4" />
-              Download
+              {video.driveLink ? "Open in Drive" : "Download"}
             </Button>
           )}
           
@@ -461,6 +454,7 @@ const VideoCard: React.FC<VideoCardProps> = ({ video, onDelete, onReprocess, isA
         <VideoPlayer
           title={video.title}
           videoUrl={generateVideoUrl()}
+          driveLink={video.driveLink}
           isOpen={isVideoPlayerOpen}
           onClose={() => setIsVideoPlayerOpen(false)}
           onDownload={handleDownload}

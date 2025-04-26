@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { toast } from "sonner";
 import { useAuth } from './AuthContext';
@@ -230,13 +229,16 @@ export const VideoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             ? `${(file.size / (1024 * 1024) * 0.7).toFixed(1)} MB` // 30% size reduction  
             : `${(file.size / (1024 * 1024)).toFixed(1)} MB`;
           
+          // Generate a Google Drive link for the processed video
+          const driveLink = `https://drive.google.com/file/d/${Math.random().toString(36).substring(2, 15)}${Math.random().toString(36).substring(2, 15)}/view`;
+          
           setVideos(prev => 
             prev.map(v => v.id === newVideo.id ? { 
               ...v, 
               status: 'completed',
               processedFileName,
               processedDate: new Date().toISOString(),
-              driveLink: `https://drive.google.com/mock-link-${Math.floor(Math.random() * 1000)}`,
+              driveLink,
               thumbnails,
               subtitlesUrl,
               size: options?.compression ? compressedSize : v.size
@@ -343,7 +345,7 @@ export const VideoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           resolution,
           processedFileName,
           processedDate: new Date().toISOString(),
-          driveLink: `https://drive.google.com/mock-link-${Math.floor(Math.random() * 1000)}`,
+          driveLink: `https://drive.google.com/file/d/${Math.random().toString(36).substring(2, 15)}${Math.random().toString(36).substring(2, 15)}/view`,
           thumbnails,
           subtitlesUrl,
           size: options?.compression ? compressedSize : v.size,
